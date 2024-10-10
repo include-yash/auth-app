@@ -1,8 +1,9 @@
 import User from "../models/user.model.js"
 import bcryptjs  from "bcryptjs"
+import { errorHandler } from "../utils/error.js";
 
 
-export const signup =  async (req, res)=>{
+export const signup =  async (req, res, next)=>{
     const {username, email, password} = req.body;
     const hashedPassword = bcryptjs.hashSync(password, 10);
     const newUser =  new User({username, email, password:hashedPassword});
@@ -14,8 +15,14 @@ export const signup =  async (req, res)=>{
     })
 }
 catch(err){
-    res.status(400).json({
-        message: "Error creating user",
-    })
+    if (err.code === 11000) {
+        const field = Object.keys(err.keyValue)[0];
+        const errorMessage = `An account with that ${field} already exists.`;
+        return res.status(400).json({
+            success: false,
+            message: errorMessage,
+        });
+    }
+    next(errorHandler(300, "something went wrong!"));
 } 
 }
