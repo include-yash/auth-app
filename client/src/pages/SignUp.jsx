@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 function SignUp() {
   const [formData, setFormData] = useState({});
-  const [error, setError] = useState(""); // error as a string for message
+  const [error, setError] = useState(""); // Error as a string for message
   const [isLoading, setLoading] = useState(false);
+  const navigate = useNavigate(); // Hook for navigation
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -28,6 +29,7 @@ function SignUp() {
         setError(data.message || "Signup failed"); // Display server error message
       } else {
         setError(""); // Clear error on success
+        navigate("/sign-in"); // Navigate to sign-in page upon success
       }
 
       setLoading(false);
@@ -45,7 +47,7 @@ function SignUp() {
         <input
           type="text"
           name="username"
-          placeholder="username"
+          placeholder="Username"
           id="username"
           className="bg-slate-100 p-3 rounded-lg mb-4"
           onChange={handleChange}
@@ -54,7 +56,7 @@ function SignUp() {
         <input
           type="email"
           name="email"
-          placeholder="email"
+          placeholder="Email"
           id="email"
           className="bg-slate-100 p-3 rounded-lg mb-4"
           onChange={handleChange}
@@ -63,7 +65,7 @@ function SignUp() {
         <input
           type="password"
           name="password"
-          placeholder="password"
+          placeholder="Password"
           id="password"
           className="bg-slate-100 p-3 rounded-lg mb-4"
           onChange={handleChange}
@@ -84,7 +86,7 @@ function SignUp() {
         </Link>
       </div>
 
-      {error && <p className="text-red-600 mt-4 text-center">{error}</p>} 
+      {error && <p className="text-red-600 mt-4 text-center">{error}</p>}
     </div>
   );
 }

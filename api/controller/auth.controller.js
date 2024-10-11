@@ -2,6 +2,7 @@ import User from "../models/user.model.js";
 import bcryptjs from "bcryptjs";
 import { errorHandler } from "../utils/error.js";
 import jwt from "jsonwebtoken"; 
+
 // Signup Controller
 export const signup = async (req, res, next) => {
   const { username, email, password } = req.body;
@@ -72,18 +73,21 @@ export const signin = async (req, res, next) => {
     if (!isValidPassword) {
       return next(errorHandler(401, "Invalid password"));
     }
-    const {password:  hashedPassword, ...rest} = validUser._doc;
 
+    // Destructure password to avoid sending it in the response
+    const { password: hashedPassword, ...rest } = validUser._doc;
 
-    const token =  jwt.sign({ userId: validUser._id }, process.env.SECRET_KEY);
+    // Generate JWT token
+    const token = jwt.sign({ userId: validUser._id }, process.env.SECRET_KEY, { expiresIn: '1d' }); // Set expiration time
 
+    // Cookie options
     const cookieOptions = {
       httpOnly: true,
-      maxAge: 24 * 60 * 60 * 1000,
+      maxAge: 24 * 60 * 60 * 1000, // 1 day in milliseconds
     };
 
-    res.cookie('access_token', token, cookieOptions).status(200).json({rest})
-
+    // Set cookie and respond
+    res.cookie('access_token', token, cookieOptions).status(200).json({ success: true, user: rest });
     
   } catch (error) {
     next(error);
