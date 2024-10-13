@@ -1,7 +1,7 @@
 import User from "../models/user.model.js";
 import bcryptjs from "bcryptjs";
 import { errorHandler } from "../utils/error.js";
-import jwt from "jsonwebtoken"; 
+import jwt from "jsonwebtoken";
 
 // Signup Controller
 export const signup = async (req, res, next) => {
@@ -88,8 +88,74 @@ export const signin = async (req, res, next) => {
 
     // Set cookie and respond
     res.cookie('access_token', token, cookieOptions).status(200).json({ success: true, user: rest });
-    
   } catch (error) {
     next(error);
+  }
+};
+
+// Google Sign-in/Sign-up Controller
+export const google = async (req, res, next) => {
+  const { email, name, photo } = req.body;
+
+  try {
+    // Validate request body fields
+    if (!email || !name || !photo) {
+      return res.status(400).json({
+        success: false,
+        message: "Missing required fields: email, name, or photo.",
+      });
+    }
+
+    // Find if the user already exists in the database by email
+    const existingUser = await User.findOne({ email });
+
+    if (existingUser) {
+      // If user exists, generate JWT token
+      const token = jwt.sign({ id: existingUser._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+      const { password: hashedPassword, ...rest } = existingUser._doc;
+
+      // Set cookie with token
+      const expiryDate = new Date(Date.now() + 3600000); // 1 hour expiry
+      return res.cookie('access_token', token, {
+        httpOnly: true,
+        maxAge: 3600000, // 1 hour
+        expires: expiryDate,
+      }).status(200).json({
+        success: true,
+        user: rest,
+      });
+    } else {
+      // If user does not exist, create a new user with Google details
+      const generatedPassword = Math.random().toString(36).slice(-8); // Generate random password
+      const hashedPassword = bcryptjs.hashSync(generatedPassword, 10); // Hash the generated password
+
+      const newUser = new User({
+        username: name.split(" ").join("").toLowerCase() + Math.floor(Math.random() * 10000).toString(), // Generate a username
+        email,
+        password: hashedPassword,
+        profilePicture: photo, // Assuming photo URL is provided by Google
+      });
+
+      // Save new user to the database
+      await newUser.save();
+
+      // Generate JWT token for new user
+      const token = jwt.sign({ id: newUser._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+      const { password: newUserPassword, ...rest } = newUser._doc;
+
+      // Set cookie with token
+      const expiryDate = new Date(Date.now() + 3600000); // 1 hour expiry
+      return res.cookie('access_token', token, {
+        httpOnly: true,
+        maxAge: 3600000, // 1 hour
+        expires: expiryDate,
+      }).status(201).json({
+        success: true,
+        user: rest,
+      });
+    }
+  } catch (error) {
+    console.error("Error during Google authentication:", error);
+    next(errorHandler(500, "Google authentication failed."));
   }
 };
