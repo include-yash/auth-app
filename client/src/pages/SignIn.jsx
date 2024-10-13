@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { signInStart, signInSuccess, signInFailure } from "../redux/user/userSlice";
+import { useDispatch, useSelector } from "react-redux";
 
 function SignIn() {
   const [formData, setFormData] = useState({ email: "", password: "" });
-  const [error, setError] = useState("");
-  const [isLoading, setLoading] = useState(false);
-  const navigate = useNavigate(); // Use the navigate function
+  const { loading, error } = useSelector((state) => state.user); // Use 'loading' instead of 'isLoading'
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -13,37 +15,33 @@ function SignIn() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError("");
+    dispatch(signInStart());
     try {
-      setLoading(true);
       const res = await fetch("http://localhost:3000/api/auth/signin", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(formData),
-        credentials: "include", // Include credentials for cookie management
+        credentials: "include", 
       });
 
-      // Check for HTTP response status
       if (!res.ok) {
         const errorData = await res.json();
         throw new Error(errorData.message || "An error occurred during sign-in.");
       }
 
       const data = await res.json();
-      
-      // Handle successful response
+
       if (data.success) {
         console.log("Login successful", data);
-        navigate("/"); // Redirect to a different route (e.g., dashboard)
+        dispatch(signInSuccess(data.user));
+        navigate("/");
       } else {
-        setError(data.message || "An error occurred during sign-in.");
+        throw new Error(data.message || "An error occurred during sign-in.");
       }
-      setLoading(false);
     } catch (error) {
-      setLoading(false);
-      setError(error.message || "Something went wrong!");
+      dispatch(signInFailure(error.message));
     }
   };
 
@@ -73,10 +71,10 @@ function SignIn() {
         />
 
         <button
-          disabled={isLoading}
+          disabled={loading} // Disable button based on loading state
           className="bg-slate-700 text-white p-3 rounded-lg mb-4 uppercase hover:opacity-95 disabled:opacity-80"
         >
-          {isLoading ? "LOADING..." : "SIGN IN"}
+          {loading ? "LOADING..." : "SIGN IN"}
         </button>
       </form>
 
